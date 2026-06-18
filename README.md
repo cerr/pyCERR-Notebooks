@@ -118,3 +118,11 @@ Shared inputs live at the repo root: `settings/`, `radiomics_settings/`, `radiom
 | Notebook | Description |
 |----------|-------------|
 | [`normal_tissue_complication_probability.ipynb`](10_outcomes_modeling/normal_tissue_complication_probability.ipynb) | NTCP modeling |
+
+## Treatment planning (IMRT)
+
+`11_treatment_planning/`
+
+| Notebook | Description |
+|----------|-------------|
+| [`imrtp_optimization_example.ipynb`](11_treatment_planning/imrtp_optimization_example.ipynb) | IMRT beamlet fluence-map optimization (pyCERR port of CERR's runOptimExample) |
