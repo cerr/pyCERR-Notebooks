@@ -19,6 +19,8 @@ Shared inputs live at the repo root: `settings/`, `radiomics_settings/`, `radiom
 | Notebook | Description |
 |----------|-------------|
 | [`pycerr_101.ipynb`](01_getting_started/pycerr_101.ipynb) | Start here: the PlanC data model — load a scan, build structures & dose from arrays, get masks, visualize |
+| [`structure_operations.ipynb`](01_getting_started/structure_operations.ipynb) | Structure masks, boolean ops, margins (GTV→PTV), label maps, Dice/Hausdorff comparison |
+| [`desktop_viewer_quickstart.ipynb`](01_getting_started/desktop_viewer_quickstart.ipynb) | Launch & tour the Qt desktop viewer (navigation, contouring, fusion, 3D, drag-drop, export) |
 | [`load_visualize_scan_seg_ex1.ipynb`](01_getting_started/load_visualize_scan_seg_ex1.ipynb) | Load DICOM and view scan + segmentation |
 | [`batch_visualize_scan_seg_ex1.ipynb`](01_getting_started/batch_visualize_scan_seg_ex1.ipynb) | Visualize scan + segmentation over a batch |
 | [`animate_viewer.ipynb`](01_getting_started/animate_viewer.ipynb) | Animate / scroll through the viewer |
