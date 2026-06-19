@@ -18,6 +18,7 @@ Shared inputs live at the repo root: `settings/`, `radiomics_settings/`, `radiom
 
 | Notebook | Description |
 |----------|-------------|
+| [`pycerr_101.ipynb`](01_getting_started/pycerr_101.ipynb) | Start here: the PlanC data model — load a scan, build structures & dose from arrays, get masks, visualize |
 | [`load_visualize_scan_seg_ex1.ipynb`](01_getting_started/load_visualize_scan_seg_ex1.ipynb) | Load DICOM and view scan + segmentation |
 | [`batch_visualize_scan_seg_ex1.ipynb`](01_getting_started/batch_visualize_scan_seg_ex1.ipynb) | Visualize scan + segmentation over a batch |
 | [`animate_viewer.ipynb`](01_getting_started/animate_viewer.ipynb) | Animate / scroll through the viewer |
@@ -29,6 +30,7 @@ Shared inputs live at the repo root: `settings/`, `radiomics_settings/`, `radiom
 
 | Notebook | Description |
 |----------|-------------|
+| [`export_to_nifti_and_dicom.ipynb`](02_data_import/export_to_nifti_and_dicom.ipynb) | Import & export: scan/dose/structures → NIfTI, structures → DICOM RTSTRUCT |
 | [`download_data_from_xnat.ipynb`](02_data_import/download_data_from_xnat.ipynb) | Pull data from an XNAT server |
 | [`xnat2pycerr.ipynb`](02_data_import/xnat2pycerr.ipynb) | XNAT → pyCERR planC |
 | [`xnat2pycerr_20251020.ipynb`](02_data_import/xnat2pycerr_20251020.ipynb) | XNAT pull + SMIT rectal segmentation |
@@ -126,3 +128,11 @@ Shared inputs live at the repo root: `settings/`, `radiomics_settings/`, `radiom
 | Notebook | Description |
 |----------|-------------|
 | [`imrtp_optimization_example.ipynb`](11_treatment_planning/imrtp_optimization_example.ipynb) | IMRT beamlet fluence-map optimization (pyCERR port of CERR's runOptimExample) |
+
+## Dose analysis
+
+`12_dose_analysis/`
+
+| Notebook | Description |
+|----------|-------------|
+| [`dvh_and_dose_metrics.ipynb`](12_dose_analysis/dvh_and_dose_metrics.ipynb) | Dose-volume histograms and dose metrics (Dx, Vx, mean/max, EUD) |
