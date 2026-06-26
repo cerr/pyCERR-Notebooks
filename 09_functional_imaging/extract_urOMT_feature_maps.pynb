@@ -1,0 +1,318 @@
+{
+ "cells": [
+  {
+   "cell_type": "markdown",
+   "id": "a7232dcb",
+   "metadata": {},
+   "source": [
+    "# urOMT on a DICOM dataset — run, visualize, export\n",
+    "\n",
+    "This notebook demonstrates the **urOMT** (unbalanced regularized Optimal Mass\n",
+    "Transport) workflow in pyCERR end to end:\n",
+    "\n",
+    "1. **Load** a longitudinal DICOM series (the time points) + an ROI structure.\n",
+    "2. **Run** urOMT (Part 1 data prep → Part 2 solver → Eulerian / Lagrangian\n",
+    "   post-processing).\n",
+    "3. **Visualize** the Eulerian maps (speed, Péclet, density), the velocity\n",
+    "   vectors, and the Lagrangian pathlines inline.\n",
+    "4. **Export** the results to NIfTI — the scalar maps *and* the velocity vector\n",
+    "   field, aligned to the scan grid.\n",
+    "\n",
+    "> Run this in the `pycerr` conda environment. For interactive 3-D, use the\n",
+    "> pyCERR viewer (`Tools → urOMT`, `Tools → 3D Visualization`).\n"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "e12b377c",
+   "metadata": {},
+   "source": [
+    "## 1. Setup\n",
+    "\n",
+    "Edit the paths below to point at your data.\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "1db13d56",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "import os\n",
+    "import numpy as np\n",
+    "import matplotlib.pyplot as plt\n",
+    "\n",
+    "import cerr.plan_container as pc\n",
+    "from cerr.uromt.config import buildConfig\n",
+    "from cerr.uromt.data import prepareData, scanTimeOrder\n",
+    "from cerr.uromt.solver import runUROMT\n",
+    "from cerr.uromt.analyze import runEULA, runEULAIntervals, runGLAD\n",
+    "from cerr.uromt import viz\n",
+    "from cerr.uromt.export import saveEulerianMapsNii, saveVectorFieldNii\n",
+    "from cerr.dataclasses.uromt import buildFromConfig, saveUROMTToPlan\n",
+    "\n",
+    "# --- point these at your data ---------------------------------------------\n",
+    "DICOM_DIR = r\"C:\\software\\urOMT\\test_data\\brain_pt\\DICOM\"\n",
+    "# ROI mask as a NIfTI (set to None if the DICOM already has an RTSTRUCT to use):\n",
+    "SEG_NII   = r\"C:\\software\\urOMT\\test_data\\brain_pt\\segmentation_mask_XC.nii\"\n",
+    "OUT_DIR   = os.path.join(os.path.expanduser(\"~\"), \"uromt_out\")\n",
+    "os.makedirs(OUT_DIR, exist_ok=True)\n",
+    "print(\"output ->\", OUT_DIR)\n"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "372bc36b",
+   "metadata": {},
+   "source": [
+    "## 2. Load the DICOM series + ROI\n",
+    "\n",
+    "`loadDcmDir` reads every scan in the directory; for urOMT these are the\n",
+    "**longitudinal time points** (they must be co-registered onto one grid). The ROI\n",
+    "structure defines where transport is computed - here we load it from a NIfTI\n",
+    "mask, but any structure already in `planC` works.\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "b8fa3aab",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "planC = pc.loadDcmDir(DICOM_DIR)\n",
+    "print(\"loaded %d scans (time points)\" % len(planC.scan))\n",
+    "\n",
+    "if SEG_NII:\n",
+    "    pc.loadNiiStructure(SEG_NII, 0, planC)        # add the ROI mask as a structure\n",
+    "structNum = len(planC.structure) - 1\n",
+    "print(\"ROI structure %d: %s\" % (structNum, planC.structure[structNum].structureName))\n"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "96185aa9",
+   "metadata": {},
+   "source": [
+    "## 3. Configure and run urOMT\n",
+    "\n",
+    "The model/algorithm settings come from a JSON file\n",
+    "(`cerr/uromt/settings/uromt_model_settings.json`); the data settings (voxel\n",
+    "spacing in mm, ROI, time points) are read from `planC`. The default\n",
+    "normalization is **RSE** (relative signal enhancement, `S(t)/S0`) with the 1st\n",
+    "time point as the pre-contrast baseline.\n",
+    "\n",
+    "Below we restrict the run to a few intervals for a quick demo via the `time`\n",
+    "selection (`first:jump:last`, 1-based into the time-ordered scans); drop that\n",
+    "line to transport every time point.\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "ad11f8c1",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "scanNumV = scanTimeOrder(planC)                   # order scans by acquisition time\n",
+    "cfg = buildConfig(scanNumV, structNum)\n",
+    "\n",
+    "# optional: a short window for a quick demo (transport time points 14,16,18,20)\n",
+    "cfg.settings[\"time\"] = {\"first_time\": 14, \"time_jump\": 2, \"last_time\": 20}\n",
+    "\n",
+    "cfg = prepareData(cfg, planC)                     # Part 1: crop, normalize, smooth\n",
+    "print(\"ROI grid:\", cfg.trueSize,\n",
+    "      \" spacing(mm):\", [round(s, 3) for s in cfg.spacing],\n",
+    "      \" frames:\", len(cfg.vol))\n",
+    "\n",
+    "res = runUROMT(cfg)                               # Part 2: the OMT solver\n",
+    "Eul = runEULAIntervals(res)                       # per-interval Eulerian maps\n",
+    "Lag = runGLAD(res)                                # Lagrangian pathlines\n",
+    "print(\"solved %d interval(s)\" % len(res[\"u\"]))\n",
+    "\n",
+    "# (optional) store on planC so it survives a pickle and shows in the GUI\n",
+    "obj = buildFromConfig(cfg, res, runEULA(res), Lag)\n",
+    "runIdx = saveUROMTToPlan(planC, obj)\n",
+    "print(\"stored as planC.urOMT[%d]\" % runIdx)\n"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "6fca19fe",
+   "metadata": {},
+   "source": [
+    "## 4. Visualize\n",
+    "\n",
+    "### Eulerian maps\n",
+    "Per-interval, time-averaged maps on the ROI grid: advective speed `|v|`, the\n",
+    "Péclet number (advection vs diffusion) and the transported density.\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "b33c2fa7",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "interval = 0\n",
+    "n = res[\"n\"]\n",
+    "zc = n[2] // 2                                    # a middle slice\n",
+    "\n",
+    "fig, axes = plt.subplots(1, 3, figsize=(13, 4))\n",
+    "for ax, (key, title, cmap) in zip(axes, [\n",
+    "        (\"speed\", \"speed |v| (mm/t)\", \"turbo\"),\n",
+    "        (\"peclet\", \"Peclet (-)\", \"turbo\"),\n",
+    "        (\"rho\", \"density\", \"gray\")]):\n",
+    "    m = np.ma.masked_equal(np.asarray(Eul[key][interval])[:, :, zc], 0.0)\n",
+    "    im = ax.imshow(m, cmap=cmap)\n",
+    "    ax.set_title(title)\n",
+    "    ax.axis(\"off\")\n",
+    "    fig.colorbar(im, ax=ax, fraction=0.046, pad=0.04)\n",
+    "fig.suptitle(\"Eulerian maps - interval %d, slice %d\" % (interval, zc))\n",
+    "plt.tight_layout()\n",
+    "plt.show()\n"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "54ba03be",
+   "metadata": {},
+   "source": [
+    "### Velocity vectors\n",
+    "The time-mean OMT velocity for the interval, quivered over the density.\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "6cb48f90",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "u = res[\"u\"][interval].mean(axis=2)               # (3, N) time-mean velocity\n",
+    "comp = [u[c].reshape(n, order=\"F\") for c in range(3)]\n",
+    "U = comp[1][:, :, zc]                             # column (x) component\n",
+    "V = comp[0][:, :, zc]                             # row (y) component\n",
+    "mag = np.hypot(U, V)\n",
+    "s = max(1, min(n[0], n[1]) // 30)\n",
+    "yy, xx = np.mgrid[0:n[0], 0:n[1]]\n",
+    "\n",
+    "fig, ax = plt.subplots(figsize=(6, 5))\n",
+    "ax.imshow(np.ma.masked_equal(np.asarray(Eul[\"rho\"][interval])[:, :, zc], 0.0),\n",
+    "          cmap=\"gray\")\n",
+    "q = ax.quiver(xx[::s, ::s], yy[::s, ::s], U[::s, ::s], V[::s, ::s],\n",
+    "              mag[::s, ::s], cmap=\"turbo\", angles=\"xy\", scale_units=\"xy\",\n",
+    "              pivot=\"mid\")\n",
+    "fig.colorbar(q, ax=ax, fraction=0.046, pad=0.04, label=\"|v| (mm/t)\")\n",
+    "ax.set_title(\"velocity - interval %d, slice %d\" % (interval, zc))\n",
+    "ax.axis(\"off\")\n",
+    "plt.show()\n"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "f182b655",
+   "metadata": {},
+   "source": [
+    "### Lagrangian pathlines\n",
+    "Transport pathlines (effective velocity `v - sigma grad log rho`), projected in-plane and coloured by speed.\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "e1ee2dac",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "fig = plt.figure(figsize=(6, 5))\n",
+    "viz.drawUROMTSlice(fig, res, Eul=runEULA(res), Lag=Lag, view=\"pathlines\", axis=2)\n",
+    "plt.show()\n"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "e2feefac",
+   "metadata": {},
+   "source": [
+    "## 5. Export to NIfTI\n",
+    "\n",
+    "### Scalar Eulerian maps\n",
+    "One 3-D NIfTI per metric per interval (`<prefix>_<metric>_t<NN>.nii.gz`), placed\n",
+    "on the scan grid so they overlay the scan in any viewer.\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "50e081bd",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "scanNum = cfg.frameScanNums[0]                    # any co-registered run frame\n",
+    "map_paths = saveEulerianMapsNii(Eul, planC, scanNum, OUT_DIR, prefix=\"uromt\")\n",
+    "print(\"saved %d map file(s):\" % len(map_paths))\n",
+    "for p in map_paths:\n",
+    "    print(\"  \", os.path.basename(p))\n"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "54445624",
+   "metadata": {},
+   "source": [
+    "### Velocity vector field\n",
+    "The 3-component field saved as three scalar NIfTI files (row / column / slice\n",
+    "components) on the scan grid - load them together as a displacement/velocity\n",
+    "field in downstream tools.\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "b8e6d1de",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "field = res[\"u\"][interval].mean(axis=2)           # (3, N) time-mean velocity\n",
+    "vec_paths = saveVectorFieldNii(field, res[\"n\"], res[\"bbox\"], planC, scanNum,\n",
+    "                               OUT_DIR, prefix=\"uromt_velocity_t%02d\" % (interval + 1))\n",
+    "print(\"saved velocity components:\")\n",
+    "for p in vec_paths:\n",
+    "    print(\"  \", os.path.basename(p))\n"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "6fbb1930",
+   "metadata": {},
+   "source": [
+    "## 6. Next steps\n",
+    "\n",
+    "- **Interactive 3-D / overlays:** open the pyCERR viewer and use\n",
+    "  `Tools → urOMT` (overlay maps / vectors / pathlines on the slices and the 3-D\n",
+    "  view) and `Tools → 3D Visualization` (volume render of the scan with the urOMT\n",
+    "  overlay). The dialog also has a **Save maps (NIfTI)** button.\n",
+    "- **Full run:** remove the `cfg.settings[\"time\"]` line to transport every time\n",
+    "  point; the per-interval maps then form a time series.\n",
+    "- **napari:** `viz.showEulerian(planC, Eul, ...)`, `viz.showLagrangian(...)` and\n",
+    "  `viz.showVelocity(...)` render the results in napari if installed.\n"
+   ]
+  }
+ ],
+ "metadata": {
+  "kernelspec": {
+   "display_name": "Python 3 (pycerr)",
+   "language": "python",
+   "name": "python3"
+  },
+  "language_info": {
+   "name": "python",
+   "version": "3.11"
+  }
+ },
+ "nbformat": 4,
+ "nbformat_minor": 5
+}
