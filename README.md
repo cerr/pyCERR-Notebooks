@@ -130,6 +130,9 @@ Shared inputs live at the repo root: `settings/`, `radiomics_settings/`, `radiom
 | Notebook | Description |
 |----------|-------------|
 | [`imrtp_optimization_example.ipynb`](11_treatment_planning/imrtp_optimization_example.ipynb) | IMRT beamlet fluence-map optimization (pyCERR port of CERR's runOptimExample) |
+| [`pyradplan_bridge_demo.ipynb`](11_treatment_planning/pyradplan_bridge_demo.ipynb) | pyRadPlan bridge: photon/proton dose calculation and fluence optimization from `planC` |
+| [`portpy_bridge_demo.ipynb`](11_treatment_planning/portpy_bridge_demo.ipynb) | PortPy bridge: export an influence matrix (pyRadPlan or native QIB) and optimize with clinical criteria |
+| [`bridges_realworld_dicom.ipynb`](11_treatment_planning/bridges_realworld_dicom.ipynb) | End-to-end template on your own DICOM: pick the pyRadPlan or QIB engine, set constraints, optimize, compare DVH |
 
 ## Dose analysis
 
