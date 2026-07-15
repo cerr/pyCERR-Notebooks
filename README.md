@@ -113,7 +113,7 @@ Shared inputs live at the repo root: `settings/`, `radiomics_settings/`, `radiom
 
 | Notebook | Description |
 |----------|-------------|
-| [`extract_semi-quantitaive_dce-mri_features.ipynb`](09_functional_imaging/extract_semi-quantitaive_dce-mri_features.ipynb) | Semi-quantitative DCE-MRI features |
+| [`extract_non-parametric_dce-mri_uptake_features.ipynb`](09_functional_imaging/extract_non-parametric_dce-mri_uptake_features.ipynb) | Non-parametric DCE-MRI features |
 
 ## Outcomes modeling (dosimetric)
 
