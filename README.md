@@ -58,6 +58,7 @@ Shared inputs live at the repo root: `settings/`, `radiomics_settings/`, `radiom
 | [`MR_HN_Nodule_SMIT_demo.ipynb`](03_autosegmentation/MR_HN_Nodule_SMIT_demo.ipynb) | MR head & neck nodule (SMIT) demo |
 | [`autosegment_installer_CT_Heart_OARs.ipynb`](03_autosegmentation/autosegment_installer_CT_Heart_OARs.ipynb) | CT heart OARs via model_installer |
 | [`SBG_autosegment_CT_Heart_OARs.ipynb`](03_autosegmentation/SBG_autosegment_CT_Heart_OARs.ipynb) | CT heart OARs on the Seven Bridges platform |
+| [`autosegment_PET_lesion_SegAnyPET.ipynb`](03_autosegmentation/autosegment_PET_lesion_SegAnyPET.ipynb) | PET lesion segmentation with SegAnyPET (ICCV'25) — click-free prompting, includes model install & weights |
 
 ## Image registration & QA
 
